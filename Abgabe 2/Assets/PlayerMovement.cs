@@ -11,18 +11,20 @@ public class PlayerMovement : MonoBehaviour
     public float jumpHeight = 3f;
 
     public Transform groundCheck;
-    public float groundDistance = 0.4f;
+    public float groundDistance = 0.1f;
     public LayerMask groundMask;
+    public LayerMask trampolinMask;
 
     public Camera camera;
     public float maxDist;
     public LayerMask grapplingMask;
     public GameObject hand;
+    public Vector3 grapplePoint;
 
-    LineRenderer robe;
-    SpringJoint joint;
+    LineRenderer rope;
     Vector3 velocity;
     bool isGrounded;
+    bool isOnTrampolin;
     bool firstJump = true;
 
     public float dashSpeed = 7f;
@@ -33,24 +35,37 @@ public class PlayerMovement : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        robe = hand.GetComponent<LineRenderer>();
+        rope = hand.GetComponent<LineRenderer>();
     }
 
     // Update is called once per frame
     void Update()
     {
         isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+        isOnTrampolin = Physics.CheckSphere(groundCheck.position, groundDistance, trampolinMask);
 
+        Debug.Log("IsGrounded: " + isGrounded + ". Velocity.y: " + velocity.y);
         if (isGrounded && velocity.y < 0)
         {
             velocity.y = -2f;
             firstJump = true;
-        } else if (joint == null)
+        }
+        else if (grapplePoint == Vector3.zero)
         {
             velocity.y += gravity * Time.deltaTime;
             controller.Move(velocity * Time.deltaTime);
         }
 
+        HandleMovement();
+
+        HandleJump();
+
+        // rope.SetPosition(0, hand.transform.position);
+        HandleGrapplingHook();
+    }
+
+    void HandleMovement()
+    {
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
@@ -58,82 +73,161 @@ public class PlayerMovement : MonoBehaviour
 
         float speed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
         if (Input.GetKeyDown(KeyCode.E) && move != Vector3.zero)
-        {
-            activateDash();
-        }
+            ActivateDash();
 
-        if (dashActive) speed = walkSpeed * dashSpeed;
+        if (dashActive)
+            speed = walkSpeed * dashSpeed;
 
-        if (joint == null)
-        {
-            controller.Move(move * speed * Time.deltaTime);
-        }
-        
+        controller.Move(move * speed * Time.deltaTime);
+    }
+
+    void HandleJump()
+    {
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        } else if (Input.GetButtonDown("Jump") && firstJump)
+            float trampolinBoost = isOnTrampolin ? 5 : 1;
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity * trampolinBoost);
+        }
+        else if (Input.GetButtonDown("Jump") && firstJump)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             firstJump = false;
         }
+    }
 
-
-        robe.SetPosition(0, hand.transform.position);
+    /*void HandleGrapplingHook()
+    {
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            Ray ray = new Ray(camera.transform.position, camera.transform.forward);
-            Debug.DrawLine(ray.origin, ray.GetPoint(maxDist));
-            RaycastHit grapple;
-            Destroy(joint);
-            if (Physics.Raycast(ray, out grapple, maxDist, grapplingMask))
-            {
-                GetComponent<Rigidbody>().isKinematic = false;
-                Vector3 grapplePoint = grapple.point;
+            TryGrapple();
+        }
 
-                robe.enabled = true;
-                robe.SetPosition(1, grapplePoint);
-                joint = transform.gameObject.AddComponent<SpringJoint>();
-                joint.autoConfigureConnectedAnchor = false;
-                joint.connectedAnchor = grapplePoint;
+        if (joint == null)
+        {
+            return;
+        }
 
-                float distanceFromPoint = Vector3.Distance(hand.transform.position, grapplePoint);
+        if (Input.GetKey(KeyCode.Mouse1))
+        {
+            ReleaseGrapple();
+            return;
+        }
 
-                //The distance grapple will try to keep from grapple point. 
-                joint.maxDistance = distanceFromPoint * 0.5f;
-                joint.minDistance = distanceFromPoint * 0.1f;
+        UpdateGrapplePosition();
+    }*/
 
-                //Adjust these values to fit your game.
-                joint.spring = 4.5f;
-                joint.damper = 7f;
-                joint.massScale = 4.5f;
+    void HandleGrapplingHook()
+    {
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            TryGrapple();
+        }
 
-            }
-            else
-            {
-                robe.enabled = false;
-                GetComponent<Rigidbody>().isKinematic = true;
-            }
+        if (grapplePoint == Vector3.zero) return;
+
+        if (Input.GetKey(KeyCode.Mouse1))
+        {
+            ReleaseGrapple();
+            return;
+        }
+
+        float distanceToGrapplePoint = Vector3.Distance(transform.position, grapplePoint);
+
+        if (distanceToGrapplePoint > 2)
+        {
+            Vector3 grappleDir = (grapplePoint - hand.transform.position).normalized;
+            Vector3 grappleVelocity = grappleDir * 20f;
+            controller.Move(grappleVelocity * Time.deltaTime);
+        }
+
+        UpdateGrapplePosition();
+    }
+
+
+    void TryGrapple()
+    {
+        Ray ray = new Ray(camera.transform.position, camera.transform.forward);
+        Debug.DrawLine(ray.origin, ray.GetPoint(maxDist));
+
+        if (Physics.Raycast(ray, out RaycastHit grappleHit, maxDist, grapplingMask))
+        {
+            grapplePoint = grappleHit.point;
+
+            rope.enabled = true;
+            rope.SetPosition(0, hand.transform.position);
+            rope.SetPosition(1, grappleHit.point);
+
+        }
+        else
+        {
+            ReleaseGrapple();
         }
     }
 
-    void activateDash()
+    /*void TryGrapple()
+    {
+        Ray ray = new Ray(camera.transform.position, camera.transform.forward);
+        Debug.DrawLine(ray.origin, ray.GetPoint(maxDist));
+
+        if (Physics.Raycast(ray, out RaycastHit grappleHit, maxDist, grapplingMask))
+        {
+            Destroy(joint);
+            joint = gameObject.AddComponent<SpringJoint>();
+
+            joint.autoConfigureConnectedAnchor = false;
+            joint.connectedAnchor = grappleHit.point;
+
+            Vector3 distanceFromPoint = hand.transform.position - grappleHit.point;
+
+            joint.maxDistance = distanceFromPoint.magnitude * 0.5f;
+            joint.minDistance = distanceFromPoint.magnitude * 0.1f;
+
+            joint.spring = 4.5f;
+            joint.damper = 7f;
+            joint.massScale = 4.5f;
+
+            rope.enabled = true;
+            rope.SetPosition(0, hand.transform.position);
+            rope.SetPosition(1, grappleHit.point);
+
+            GetComponent<Rigidbody>().useGravity = true;
+        }
+        else
+        {
+            ReleaseGrapple();
+        }
+    }*/
+
+    void ReleaseGrapple()
+    {
+        rope.enabled = false;
+        // GetComponent<Rigidbody>().useGravity = true;
+        grapplePoint = Vector3.zero;
+    }
+
+    void UpdateGrapplePosition()
+    {
+        rope.SetPosition(0, hand.transform.position);
+        rope.SetPosition(1, grapplePoint);
+    }
+
+    void ActivateDash()
     {
         if (dashAvailable > 0)
         {
             dashActive = true;
             dashAvailable--;
-            Invoke("deactivateDash", 0.2f);
+            Invoke("DeactivateDash", 0.2f);
         }
     }
 
-    void deactivateDash()
+    void DeactivateDash()
     {
         dashActive = false;
-        Invoke("fillDash", 2.5f);
+        Invoke("FillDash", 2.5f);
     }
 
-    void fillDash()
+    void FillDash()
     {
         if (dashAvailable < dashAmount)
         {
