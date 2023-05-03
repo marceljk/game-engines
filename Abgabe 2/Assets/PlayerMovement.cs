@@ -11,26 +11,30 @@ public class PlayerMovement : MonoBehaviour
     public float jumpHeight = 3f;
 
     public Transform groundCheck;
-    public float groundDistance = 0.1f;
+    public float groundDistance = 0.4f;
     public LayerMask groundMask;
     public LayerMask trampolinMask;
 
     public Camera camera;
     public float maxDist;
-    public LayerMask grapplingMask;
+    public LayerMask wallMask;
     public GameObject hand;
     public Vector3 grapplePoint;
+    public float wallDistance = 0.8f;
+    public float minJumpHeight = 2f;
+    public float trampolinBoost = 5f;
 
     LineRenderer rope;
     Vector3 velocity;
     bool isGrounded;
-    bool isOnTrampolin;
     bool firstJump = true;
 
     public float dashSpeed = 7f;
     bool dashActive = false;
     int dashAmount = 2;
     int dashAvailable = 2;
+    bool disableGravity = false;
+    bool isOnWall = false;
 
     // Start is called before the first frame update
     void Start()
@@ -41,11 +45,13 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
-        isOnTrampolin = Physics.CheckSphere(groundCheck.position, groundDistance, trampolinMask);
+        isGrounded = Physics.Raycast(groundCheck.position, Vector3.down, groundDistance, groundMask);
 
-        Debug.Log("IsGrounded: " + isGrounded + ". Velocity.y: " + velocity.y);
-        if (isGrounded && velocity.y < 0)
+        if (disableGravity)
+        {
+            velocity.y = 0;
+        }
+        else if (isGrounded && velocity.y < 0)
         {
             velocity.y = -2f;
             firstJump = true;
@@ -56,12 +62,15 @@ public class PlayerMovement : MonoBehaviour
             controller.Move(velocity * Time.deltaTime);
         }
 
+        HandleTrampolin();
+
         HandleMovement();
 
         HandleJump();
 
-        // rope.SetPosition(0, hand.transform.position);
         HandleGrapplingHook();
+
+        HandleWallRun();
     }
 
     void HandleMovement()
@@ -83,10 +92,10 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleJump()
     {
-        if (Input.GetButtonDown("Jump") && isGrounded)
+        if (Input.GetButtonDown("Jump") && (isGrounded || isOnWall))
         {
-            float trampolinBoost = isOnTrampolin ? 5 : 1;
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity * trampolinBoost);
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            firstJump = true;
         }
         else if (Input.GetButtonDown("Jump") && firstJump)
         {
@@ -95,26 +104,29 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    /*void HandleGrapplingHook()
+    void HandleTrampolin()
     {
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        if (Physics.Raycast(groundCheck.position, Vector3.down, groundDistance, trampolinMask))
         {
-            TryGrapple();
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity * trampolinBoost);
         }
+    }
 
-        if (joint == null)
+    void HandleWallRun()
+    {
+        isOnWall = Physics.CheckSphere(transform.position, wallDistance, wallMask);
+        if (isOnWall && Input.GetKey(KeyCode.LeftShift) && AboveGround())
         {
+            disableGravity = true;
             return;
         }
+        disableGravity = false;
+    }
 
-        if (Input.GetKey(KeyCode.Mouse1))
-        {
-            ReleaseGrapple();
-            return;
-        }
-
-        UpdateGrapplePosition();
-    }*/
+    bool AboveGround()
+    {
+        return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, groundMask);
+    }
 
     void HandleGrapplingHook()
     {
@@ -149,7 +161,7 @@ public class PlayerMovement : MonoBehaviour
         Ray ray = new Ray(camera.transform.position, camera.transform.forward);
         Debug.DrawLine(ray.origin, ray.GetPoint(maxDist));
 
-        if (Physics.Raycast(ray, out RaycastHit grappleHit, maxDist, grapplingMask))
+        if (Physics.Raycast(ray, out RaycastHit grappleHit, maxDist, wallMask))
         {
             grapplePoint = grappleHit.point;
 
@@ -164,44 +176,9 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    /*void TryGrapple()
-    {
-        Ray ray = new Ray(camera.transform.position, camera.transform.forward);
-        Debug.DrawLine(ray.origin, ray.GetPoint(maxDist));
-
-        if (Physics.Raycast(ray, out RaycastHit grappleHit, maxDist, grapplingMask))
-        {
-            Destroy(joint);
-            joint = gameObject.AddComponent<SpringJoint>();
-
-            joint.autoConfigureConnectedAnchor = false;
-            joint.connectedAnchor = grappleHit.point;
-
-            Vector3 distanceFromPoint = hand.transform.position - grappleHit.point;
-
-            joint.maxDistance = distanceFromPoint.magnitude * 0.5f;
-            joint.minDistance = distanceFromPoint.magnitude * 0.1f;
-
-            joint.spring = 4.5f;
-            joint.damper = 7f;
-            joint.massScale = 4.5f;
-
-            rope.enabled = true;
-            rope.SetPosition(0, hand.transform.position);
-            rope.SetPosition(1, grappleHit.point);
-
-            GetComponent<Rigidbody>().useGravity = true;
-        }
-        else
-        {
-            ReleaseGrapple();
-        }
-    }*/
-
     void ReleaseGrapple()
     {
         rope.enabled = false;
-        // GetComponent<Rigidbody>().useGravity = true;
         grapplePoint = Vector3.zero;
     }
 
@@ -217,14 +194,14 @@ public class PlayerMovement : MonoBehaviour
         {
             dashActive = true;
             dashAvailable--;
-            Invoke("DeactivateDash", 0.2f);
+            Invoke(nameof(DeactivateDash), 0.2f);
         }
     }
 
     void DeactivateDash()
     {
         dashActive = false;
-        Invoke("FillDash", 2.5f);
+        Invoke(nameof(FillDash), 2.5f);
     }
 
     void FillDash()
