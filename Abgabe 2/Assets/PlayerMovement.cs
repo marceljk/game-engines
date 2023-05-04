@@ -23,6 +23,9 @@ public class PlayerMovement : MonoBehaviour
     public float wallDistance = 0.8f;
     public float minJumpHeight = 2f;
     public float trampolinBoost = 5f;
+    public GameObject bullet;
+    public GameObject aimPoint;
+    public float gunForce;
 
     LineRenderer rope;
     Vector3 velocity;
@@ -35,11 +38,15 @@ public class PlayerMovement : MonoBehaviour
     int dashAvailable = 2;
     bool disableGravity = false;
     bool isOnWall = false;
+    enum PlayerWeapons { GrapplingHook, Gun, Bomb };
+    PlayerWeapons currentWeapon;
+    float health;
 
     // Start is called before the first frame update
     void Start()
     {
         rope = hand.GetComponent<LineRenderer>();
+        health = 100f;
     }
 
     // Update is called once per frame
@@ -70,7 +77,13 @@ public class PlayerMovement : MonoBehaviour
 
         HandleGrapplingHook();
 
+        HandleGun();
+
         HandleWallRun();
+
+        HandleWeaponSwitch();
+
+        CheckHealth();
     }
 
     void HandleMovement()
@@ -130,6 +143,7 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleGrapplingHook()
     {
+        if (currentWeapon != PlayerWeapons.GrapplingHook) return;
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             TryGrapple();
@@ -176,6 +190,19 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    void HandleGun()
+    {
+        if (currentWeapon != PlayerWeapons.Gun) return;
+        bool enableAimPoint = Input.GetKey(KeyCode.Mouse1);
+        aimPoint.SetActive(enableAimPoint);
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            var shootBullet = Instantiate(bullet, hand.transform.position, Quaternion.identity);
+            shootBullet.GetComponent<Rigidbody>().AddForce(camera.transform.forward * gunForce, ForceMode.Impulse);
+            Destroy(shootBullet, 1f);
+        }
+    }
+
     void ReleaseGrapple()
     {
         rope.enabled = false;
@@ -210,5 +237,33 @@ public class PlayerMovement : MonoBehaviour
         {
             dashAvailable = dashAmount;
         }
+    }
+
+    void HandleWeaponSwitch()
+    {
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            currentWeapon = PlayerWeapons.GrapplingHook;
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            currentWeapon = PlayerWeapons.Gun;
+            ReleaseGrapple();
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            currentWeapon = PlayerWeapons.Bomb;
+            ReleaseGrapple();
+        }
+    }
+
+    public void AddDamage()
+    {
+        health -= 25;
+    }
+
+    void CheckHealth()
+    {
+        if (health < 0) Destroy(this.gameObject);
     }
 }
