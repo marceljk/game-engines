@@ -8,7 +8,7 @@ public class BulletScript : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            collision.gameObject.GetComponent<PlayerMovement>().AddDamage();
+            collision.gameObject.GetComponent<PlayerMovement>().AddDamage(25);
             Debug.Log("PlayerHit");
         } else Debug.Log("Hit");
         Destroy(this.gameObject);

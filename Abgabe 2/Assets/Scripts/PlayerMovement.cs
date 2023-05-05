@@ -26,6 +26,8 @@ public class PlayerMovement : MonoBehaviour
     public GameObject bullet;
     public GameObject aimPoint;
     public float gunForce;
+    public GameObject bomb;
+    public float bombForce;
 
     LineRenderer rope;
     Vector3 velocity;
@@ -78,6 +80,8 @@ public class PlayerMovement : MonoBehaviour
         HandleGrapplingHook();
 
         HandleGun();
+
+        HandleBomb();
 
         HandleWallRun();
 
@@ -257,13 +261,26 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    public void AddDamage()
+    public void AddDamage(float damage = 25)
     {
-        health -= 25;
+        health -= Mathf.Abs(damage);
+        Debug.Log(health);
     }
 
     void CheckHealth()
     {
+        // Needs to be changed into a respawn
         if (health < 0) Destroy(this.gameObject);
+    }
+
+    void HandleBomb() {
+        if (currentWeapon != PlayerWeapons.Bomb) return;
+
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            var bombInstance = Instantiate(bomb, hand.transform.position, Quaternion.identity);
+            bombInstance.GetComponent<Rigidbody>().AddForce(camera.transform.forward * bombForce, ForceMode.Impulse);
+        }
+
     }
 }
