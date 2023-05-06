@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -29,6 +30,9 @@ public class PlayerMovement : MonoBehaviour
     public GameObject bomb;
     public float bombForce;
 
+    public GameObject healthBar;
+    public GameObject dashBar;
+
     LineRenderer rope;
     Vector3 velocity;
     bool isGrounded;
@@ -36,19 +40,24 @@ public class PlayerMovement : MonoBehaviour
 
     public float dashSpeed = 7f;
     bool dashActive = false;
-    int dashAmount = 2;
-    int dashAvailable = 2;
+    public int dashAmount = 2;
+    int dashAvailable;
     bool disableGravity = false;
     bool isOnWall = false;
     enum PlayerWeapons { GrapplingHook, Gun, Bomb };
     PlayerWeapons currentWeapon;
     float health;
+    public Sprite gunImage;
+    public Sprite bombImage;
+    public Sprite grapplingHookImage;
+    public GameObject currentWeaponImage;
 
     // Start is called before the first frame update
     void Start()
     {
         rope = hand.GetComponent<LineRenderer>();
         health = 100f;
+        dashAvailable = dashAmount;
     }
 
     // Update is called once per frame
@@ -88,6 +97,8 @@ public class PlayerMovement : MonoBehaviour
         HandleWeaponSwitch();
 
         CheckHealth();
+
+        UpdateUI();
     }
 
     void HandleMovement()
@@ -248,16 +259,19 @@ public class PlayerMovement : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             currentWeapon = PlayerWeapons.GrapplingHook;
+            currentWeaponImage.GetComponent<Image>().sprite = grapplingHookImage;
         }
         else if (Input.GetKeyDown(KeyCode.Alpha2))
         {
             currentWeapon = PlayerWeapons.Gun;
             ReleaseGrapple();
+            currentWeaponImage.GetComponent<Image>().sprite = gunImage;
         }
         else if (Input.GetKeyDown(KeyCode.Alpha3))
         {
             currentWeapon = PlayerWeapons.Bomb;
             ReleaseGrapple();
+            currentWeaponImage.GetComponent<Image>().sprite = bombImage;
         }
     }
 
@@ -276,11 +290,20 @@ public class PlayerMovement : MonoBehaviour
     void HandleBomb() {
         if (currentWeapon != PlayerWeapons.Bomb) return;
 
+        bool enableAimPoint = Input.GetKey(KeyCode.Mouse1);
+        aimPoint.SetActive(enableAimPoint);
+        
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             var bombInstance = Instantiate(bomb, hand.transform.position, Quaternion.identity);
             bombInstance.GetComponent<Rigidbody>().AddForce(camera.transform.forward * bombForce, ForceMode.Impulse);
         }
 
+    }
+
+    void UpdateUI()
+    {
+        healthBar.GetComponent<Scrollbar>().size = health / 100;
+        dashBar.GetComponent<Scrollbar>().size = (float)dashAvailable / (float)dashAmount;
     }
 }
