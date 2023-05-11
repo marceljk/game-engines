@@ -190,14 +190,25 @@ public class PlayerMovement : MonoBehaviour
         Ray ray = new Ray(camera.transform.position, camera.transform.forward);
         Debug.DrawLine(ray.origin, ray.GetPoint(maxDist));
 
-        if (Physics.Raycast(ray, out RaycastHit grappleHit, maxDist, wallMask))
+        if (Physics.Raycast(ray, out RaycastHit grappleHit, maxDist))
         {
+            // Checks if the object which was hit, is in wallMask
+            if (wallMask != (wallMask | (1 << grappleHit.transform.gameObject.layer))) { return; }
             grapplePoint = grappleHit.point;
 
-            rope.enabled = true;
-            rope.SetPosition(0, hand.transform.position);
-            rope.SetPosition(1, grappleHit.point);
-
+            // Check for obstructions
+            // Vector3 playerToHook = grapplePoint - hand.transform.position;
+            // if (!Physics.Raycast(hand.transform.position, playerToHook.normalized, out RaycastHit obstructionHit, playerToHook.magnitude))
+            // {
+                rope.enabled = true;
+                rope.SetPosition(0, hand.transform.position);
+                rope.SetPosition(1, grappleHit.point);
+            // }
+            // else
+            // {
+                // Debug.DrawLine(hand.transform.position, obstructionHit.point, Color.red, 1f);
+                // ReleaseGrapple();
+            // }
         }
         else
         {
@@ -287,12 +298,13 @@ public class PlayerMovement : MonoBehaviour
         if (health < 0) Destroy(this.gameObject);
     }
 
-    void HandleBomb() {
+    void HandleBomb()
+    {
         if (currentWeapon != PlayerWeapons.Bomb) return;
 
         bool enableAimPoint = Input.GetKey(KeyCode.Mouse1);
         aimPoint.SetActive(enableAimPoint);
-        
+
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             var bombInstance = Instantiate(bomb, hand.transform.position, Quaternion.identity);

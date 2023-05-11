@@ -6,11 +6,11 @@ public class BulletScript : MonoBehaviour
 {
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Player"))
+        Debug.Log(LayerMask.LayerToName(collision.gameObject.layer));
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Bot"))
         {
-            collision.gameObject.GetComponent<PlayerMovement>().AddDamage(25);
-            Debug.Log("PlayerHit");
-        } else Debug.Log("Hit");
+            collision.gameObject.GetComponent<AgentControls>().AddDamage(25);
+        }
         Destroy(this.gameObject);
     }
     // Start is called before the first frame update

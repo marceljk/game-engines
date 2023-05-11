@@ -30,12 +30,19 @@ public class BombScript : MonoBehaviour
             {
                 rb.AddExplosionForce(explosionForce, transform.position, explosionRadius, 1, ForceMode.Impulse);
             }
+            float distance = Vector3.Distance(transform.position, c.transform.position);
+            float damageFactor = 1 - (distance / explosionRadius);
+
             PlayerMovement movement = c.GetComponent<PlayerMovement>();
             if (movement != null)
             {
-                float distance = Vector3.Distance(transform.position, c.transform.position);
-                float damageFactor = 1 - (distance / explosionRadius);
                 movement.AddDamage(damageFactor * damage);
+            }
+
+            AgentControls controls = c.GetComponent<AgentControls>();
+            if (controls != null)
+            {
+                controls.AddDamage(damageFactor * damage);
             }
         }
         // Instantiate(particlePrefab, transform.position, Quaternion.identity);
