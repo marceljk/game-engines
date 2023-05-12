@@ -7,8 +7,15 @@ public class AgentControls : MonoBehaviour
 {
     public GameObject player;
     public float followDistance;
+    public GameObject bomb;
+    public float bombForce;
 
+    [SerializeField] GameObject rightHand;
     float health;
+    float distance;
+    float timestampLastBomb;
+    bool dead;
+
     NavMeshAgent agent;
     Animator animator;
     // Start is called before the first frame update
@@ -16,19 +23,25 @@ public class AgentControls : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
+
         health = 100f;
+        timestampLastBomb = Time.time;
+        dead = false;
     }
 
     // Update is called once per frame
     void Update()
     {
+        distance = Vector3.Distance(transform.position, player.transform.position);
+
+        if (dead) return;
         FollowPlayer();
+        ThrowBomb();
         CheckHealth();
     }
 
     void FollowPlayer()
     {
-        float distance = Vector3.Distance(transform.position, player.transform.position);
         if (distance < followDistance)
         {
             agent.SetDestination(player.transform.position);
@@ -53,6 +66,24 @@ public class AgentControls : MonoBehaviour
         }
     }
 
+    void ThrowBomb()
+    {
+        if (distance < 15 && (Time.time - 2) > timestampLastBomb)
+        {
+            timestampLastBomb = Time.time;
+            animator.SetTrigger("Throw");
+        }
+    }
+
+    public void InstantiateBomb()
+    {
+        Vector3 handPosition = rightHand.transform.position;
+        Vector3 direction = player.transform.position - handPosition;
+        direction.Normalize();
+        GameObject bombInstance = Instantiate(bomb, handPosition, Quaternion.identity);
+        bombInstance.GetComponent<Rigidbody>().AddForce(direction * bombForce, ForceMode.Impulse);
+    }
+
     public void AddDamage(float damage = 25)
     {
         health -= Mathf.Abs(damage);
@@ -62,7 +93,46 @@ public class AgentControls : MonoBehaviour
     void CheckHealth()
     {
         // Needs to be changed into a dead animation & respawn
-        if (health <= 0) Destroy(this.gameObject);
+        if (health <= 0)
+        {
+            dead = true;
+            animator.SetLayerWeight(animator.GetLayerIndex("Death"), 1);
+            animator.SetBool("Death", true);
+        }
+    }
+
+    /*private void OnAnimatorMove()
+    {
+        transform.position = animator.rootPosition;
+        transform.rotation = animator.rootRotation;
+    }*/
+
+    public void Dead()
+    {
+        Invoke(nameof(Spawn), 3f);
+    }
+
+    void Spawn(bool respawn = true)
+    {
+        if (!dead) return;
+        
+        animator.SetBool("Death", false);
+
+        if (respawn)
+        {
+            Start();
+            animator.SetLayerWeight(animator.GetLayerIndex("Death"), 0);
+
+            float x = Random.Range(-10f, 11f);
+            float z = Random.Range(15f, 31f);
+            int randomSign = Random.Range(0, 2) * 2 - 1;
+            transform.position = new Vector3(x, 0.5f, z * randomSign);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+
     }
 
 }

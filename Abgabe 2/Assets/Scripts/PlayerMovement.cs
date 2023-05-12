@@ -196,19 +196,9 @@ public class PlayerMovement : MonoBehaviour
             if (wallMask != (wallMask | (1 << grappleHit.transform.gameObject.layer))) { return; }
             grapplePoint = grappleHit.point;
 
-            // Check for obstructions
-            // Vector3 playerToHook = grapplePoint - hand.transform.position;
-            // if (!Physics.Raycast(hand.transform.position, playerToHook.normalized, out RaycastHit obstructionHit, playerToHook.magnitude))
-            // {
-                rope.enabled = true;
-                rope.SetPosition(0, hand.transform.position);
-                rope.SetPosition(1, grappleHit.point);
-            // }
-            // else
-            // {
-                // Debug.DrawLine(hand.transform.position, obstructionHit.point, Color.red, 1f);
-                // ReleaseGrapple();
-            // }
+            rope.enabled = true;
+            rope.SetPosition(0, hand.transform.position);
+            rope.SetPosition(1, grappleHit.point);
         }
         else
         {
@@ -307,7 +297,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            var bombInstance = Instantiate(bomb, hand.transform.position, Quaternion.identity);
+            GameObject bombInstance = Instantiate(bomb, hand.transform.position, Quaternion.identity);
             bombInstance.GetComponent<Rigidbody>().AddForce(camera.transform.forward * bombForce, ForceMode.Impulse);
         }
 

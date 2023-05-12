@@ -25,6 +25,8 @@ public class BombScript : MonoBehaviour
         Debug.Log(objs.Length);
         foreach(Collider c in objs)
         {
+            if (c.gameObject == null) return;
+
             Rigidbody rb = c.GetComponent<Rigidbody>();
             if (rb != null)
             {
