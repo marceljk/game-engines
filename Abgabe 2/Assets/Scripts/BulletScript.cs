@@ -6,7 +6,6 @@ public class BulletScript : MonoBehaviour
 {
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log(LayerMask.LayerToName(collision.gameObject.layer));
         if (collision.gameObject.layer == LayerMask.NameToLayer("Bot"))
         {
             collision.gameObject.GetComponent<AgentControls>().AddDamage(25);

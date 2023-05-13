@@ -63,6 +63,7 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
         isGrounded = Physics.Raycast(groundCheck.position, Vector3.down, groundDistance, groundMask);
 
         if (disableGravity)
@@ -279,13 +280,12 @@ public class PlayerMovement : MonoBehaviour
     public void AddDamage(float damage = 25)
     {
         health -= Mathf.Abs(damage);
-        Debug.Log(health);
     }
 
     void CheckHealth()
     {
         // Needs to be changed into a respawn
-        if (health < 0) Destroy(this.gameObject);
+        if (health < 0) Destroy(gameObject);
     }
 
     void HandleBomb()

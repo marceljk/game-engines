@@ -32,6 +32,7 @@ public class AgentControls : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (player == null) return;
         distance = Vector3.Distance(transform.position, player.transform.position);
 
         if (dead) return;
@@ -42,17 +43,14 @@ public class AgentControls : MonoBehaviour
 
     void FollowPlayer()
     {
-        if (distance < followDistance)
+        agent.SetDestination(player.transform.position);
+        if (distance < 5f)
         {
-            agent.SetDestination(player.transform.position);
-            if (distance < 5f)
-            {
-                agent.SetDestination(transform.position);
-            }
-            else if (distance < 10f)
-            {
-                agent.SetDestination(player.transform.position + (transform.position - player.transform.position).normalized * 0.5f);
-            }
+            agent.SetDestination(transform.position);
+        }
+        else if (distance < 10f)
+        {
+            agent.SetDestination(player.transform.position + (transform.position - player.transform.position).normalized * 0.5f);
         }
 
         if (agent.velocity.magnitude > 0)
@@ -87,40 +85,34 @@ public class AgentControls : MonoBehaviour
     public void AddDamage(float damage = 25)
     {
         health -= Mathf.Abs(damage);
-        Debug.Log("Bot health" + health);
     }
 
     void CheckHealth()
     {
-        // Needs to be changed into a dead animation & respawn
         if (health <= 0)
         {
             dead = true;
+            agent.isStopped = true;
             animator.SetLayerWeight(animator.GetLayerIndex("Death"), 1);
             animator.SetBool("Death", true);
         }
     }
-
-    /*private void OnAnimatorMove()
-    {
-        transform.position = animator.rootPosition;
-        transform.rotation = animator.rootRotation;
-    }*/
 
     public void Dead()
     {
         Invoke(nameof(Spawn), 3f);
     }
 
-    void Spawn(bool respawn = true)
+    void Spawn()
     {
         if (!dead) return;
-        
+        bool respawn = true;
         animator.SetBool("Death", false);
 
         if (respawn)
         {
             Start();
+            agent.isStopped = false;
             animator.SetLayerWeight(animator.GetLayerIndex("Death"), 0);
 
             float x = Random.Range(-10f, 11f);

@@ -22,7 +22,6 @@ public class BombScript : MonoBehaviour
         Collider[] objs;
         objs = Physics.OverlapSphere(transform.position, explosionRadius);
 
-        Debug.Log(objs.Length);
         foreach(Collider c in objs)
         {
             if (c.gameObject == null) return;
